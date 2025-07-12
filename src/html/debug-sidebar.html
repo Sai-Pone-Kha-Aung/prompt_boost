@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prompt Boost Sidebar Debug</title>
+    <style>
+      /* Reset and base styles */
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background-color: #f5f5f5;
+      }
+
+      /* Demo content area */
+      .demo-content {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-textarea {
+        width: 100%;
+        height: 200px;
+        padding: 15px;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        font-size: 14px;
+        font-family: inherit;
+        resize: vertical;
+      }
+
+      .demo-textarea:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      /* Prompt Boost Sidebar Styles */
+      #prompt-boost-sidebar {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 280px;
+        height: 100vh;
+        background: #ffffff;
+        border-left: 2px solid #e9ecef;
+        box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        font-size: 14px;
+        color: #333;
+        transition: width 0.3s ease, box-shadow 0.3s ease;
+        overflow: hidden;
+      }
+
+      #prompt-boost-sidebar.collapsed {
+        width: 50px;
+        box-shadow: -1px 0 5px rgba(0, 0, 0, 0.05);
+      }
+
+      .pb-sidebar-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        min-height: 50px;
+        transition: padding 0.3s ease;
+      }
+
+      #prompt-boost-sidebar.collapsed .pb-sidebar-header {
+        padding: 10px 8px;
+        justify-content: center;
+      }
+
+      .pb-sidebar-title {
+        font-size: 18px;
+        font-weight: 600;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: opacity 0.3s ease;
+      }
+
+      #prompt-boost-sidebar.collapsed .pb-sidebar-title {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .pb-toggle-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        transition: all 0.2s;
+      }
+
+      .pb-toggle-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: scale(1.1);
+      }
+
+      .pb-sidebar-content {
+        height: calc(100vh - 70px);
+        overflow-y: auto;
+        padding: 20px;
+        transition: opacity 0.3s ease, padding 0.3s ease;
+      }
+
+      #prompt-boost-sidebar.collapsed .pb-sidebar-content {
+        opacity: 0;
+        pointer-events: none;
+        padding: 0;
+      }
+
+      .pb-prompts-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .pb-prompt-item {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        padding: 15px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+      }
+
+      .pb-prompt-item:hover {
+        background: #e3f2fd;
+        border-color: #667eea;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+      }
+
+      .pb-prompt-item:active {
+        transform: translateY(0);
+        box-shadow: 0 1px 4px rgba(102, 126, 234, 0.2);
+      }
+
+      .pb-prompt-title {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 8px;
+        font-size: 14px;
+        line-height: 1.4;
+        word-wrap: break-word;
+      }
+
+      .pb-prompt-preview {
+        font-size: 12px;
+        color: #666;
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        word-wrap: break-word;
+      }
+
+      .pb-prompt-count {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        font-size: 12px;
+        padding: 2px 8px;
+        border-radius: 12px;
+        margin-left: 8px;
+      }
+
+      .pb-empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: #666;
+      }
+
+      .pb-empty-icon {
+        font-size: 48px;
+        margin-bottom: 15px;
+        opacity: 0.5;
+      }
+
+      .pb-empty-text {
+        font-size: 14px;
+        line-height: 1.5;
+        margin: 0;
+      }
+
+      .pb-status-indicator {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #28a745;
+        opacity: 0;
+        transition: opacity 0.2s;
+      }
+
+      .pb-prompt-item.inserting .pb-status-indicator {
+        opacity: 1;
+        animation: pb-pulse 1s infinite;
+      }
+
+      @keyframes pb-pulse {
+        0% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.5;
+          transform: scale(1.2);
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      /* Scrollbar styles */
+      .pb-sidebar-content::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .pb-sidebar-content::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+      }
+
+      .pb-sidebar-content::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 10px;
+      }
+
+      .pb-sidebar-content::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+      }
+
+      /* Notification styles */
+      .notification {
+        position: fixed;
+        top: 20px;
+        right: 300px;
+        padding: 12px 20px;
+        border-radius: 6px;
+        font-family: inherit;
+        font-size: 14px;
+        font-weight: 500;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        z-index: 1001;
+        opacity: 0;
+        transform: translateY(-10px);
+        transition: all 0.3s ease;
+        max-width: 300px;
+        word-wrap: break-word;
+      }
+
+      .notification.success {
+        background: #2ed573;
+        color: white;
+      }
+
+      .notification.error {
+        background: #ff4757;
+        color: white;
+      }
+
+      .notification.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      /* Responsive */
+      @media (max-width: 1200px) {
+        #prompt-boost-sidebar {
+          width: 250px;
+        }
+        #prompt-boost-sidebar.collapsed {
+          width: 50px;
+        }
+      }
+
+      @media (max-width: 1024px) {
+        #prompt-boost-sidebar {
+          width: 220px;
+        }
+        #prompt-boost-sidebar.collapsed {
+          width: 50px;
+        }
+        .pb-sidebar-content {
+          padding: 15px;
+        }
+        .pb-prompt-item {
+          padding: 12px;
+        }
+      }
+
+      @media (max-width: 768px) {
+        #prompt-boost-sidebar {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Demo Content -->
+    <div class="demo-content">
+      <h1>Prompt Boost Sidebar Debug</h1>
+      <p>
+        This is a debug version of the Prompt Boost sidebar. Click on prompts in
+        the sidebar to insert them into the textarea below.
+      </p>
+
+      <label for="demo-textarea">Test Textarea:</label>
+      <textarea
+        id="demo-textarea"
+        class="demo-textarea"
+        placeholder="Click on a prompt in the sidebar to insert it here..."
+      ></textarea>
+
+      <p><strong>Instructions:</strong></p>
+      <ul>
+        <li>Click the toggle button (←/→) to collapse/expand the sidebar</li>
+        <li>Click on any prompt to insert it into the textarea</li>
+        <li>The sidebar should remain accessible when collapsed</li>
+      </ul>
+    </div>
+
+    <!-- Sidebar -->
+    <div id="prompt-boost-sidebar">
+      <div class="pb-sidebar-header">
+        <div class="pb-sidebar-content-header">
+          <h3 class="pb-sidebar-title">
+            ⚡ Prompts
+            <span class="pb-prompt-count">0</span>
+          </h3>
+        </div>
+        <button class="pb-toggle-btn" title="Toggle Sidebar">
+          <span>→</span>
+        </button>
+      </div>
+      <div class="pb-sidebar-content">
+        <ul class="pb-prompts-list"></ul>
+      </div>
+    </div>
+
+    <script>
+      class PromptBoostDebug {
+        constructor() {
+          this.sidebar = document.getElementById("prompt-boost-sidebar");
+          this.isVisible = true;
+
+          // Sample prompts for testing
+          this.prompts = [
+            {
+              title: "Code Review Request",
+              content:
+                "Please review this code for best practices, potential bugs, and performance improvements. Focus on readability and maintainability.",
+            },
+            {
+              title: "Explain Complex Topic",
+              content:
+                "Explain this complex topic in simple terms that a beginner could understand. Use analogies and examples where helpful.",
+            },
+            {
+              title: "Generate Test Cases",
+              content:
+                "Generate comprehensive test cases for this function, including edge cases, error conditions, and boundary value testing.",
+            },
+            {
+              title: "Refactor Code",
+              content:
+                "Refactor this code to make it more efficient, readable, and maintainable. Follow modern best practices and design patterns.",
+            },
+            {
+              title: "Debug Issue",
+              content:
+                "Help me debug this issue. Analyze the code and error message to identify the root cause and suggest a solution.",
+            },
+          ];
+
+          this.init();
+        }
+
+        init() {
+          this.setupToggle();
+          this.updateSidebar();
+        }
+
+        setupToggle() {
+          const toggleBtn = this.sidebar.querySelector(".pb-toggle-btn");
+          toggleBtn.addEventListener("click", () => this.toggleSidebar());
+        }
+
+        toggleSidebar() {
+          this.isVisible = !this.isVisible;
+          const toggleIcon = this.sidebar.querySelector(".pb-toggle-btn span");
+          const toggleBtn = this.sidebar.querySelector(".pb-toggle-btn");
+          const sidebarContentHeader = this.sidebar.querySelector(
+            ".pb-sidebar-content-header"
+          );
+
+          if (this.isVisible) {
+            this.sidebar.classList.remove("collapsed");
+            toggleIcon.textContent = "→";
+            sidebarContentHeader.style.display = "flex";
+          } else {
+            this.sidebar.classList.add("collapsed");
+            sidebarContentHeader.style.display = "none";
+            toggleBtn.style.justifyContent = "flex-start";
+            toggleIcon.textContent = "←";
+          }
+        }
+
+        updateSidebar() {
+          const promptsList = this.sidebar.querySelector(".pb-prompts-list");
+          const promptCount = this.sidebar.querySelector(".pb-prompt-count");
+
+          promptCount.textContent = this.prompts.length;
+
+          if (this.prompts.length === 0) {
+            promptsList.innerHTML = `
+                        <div class="pb-empty-state">
+                            <div class="pb-empty-icon">📝</div>
+                            <p class="pb-empty-text">No prompts saved yet.<br>Use the extension popup to add prompts!</p>
+                        </div>
+                    `;
+            return;
+          }
+
+          const promptsHTML = this.prompts
+            .map(
+              (prompt, index) => `
+                    <li class="pb-prompt-item" data-index="${index}">
+                        <div class="pb-prompt-title">${this.escapeHtml(
+                          prompt.title
+                        )}</div>
+                        <div class="pb-prompt-preview">${this.escapeHtml(
+                          prompt.content
+                        )}</div>
+                        <div class="pb-status-indicator"></div>
+                    </li>
+                `
+            )
+            .join("");
+
+          promptsList.innerHTML = promptsHTML;
+
+          // Add click listeners
+          this.sidebar.querySelectorAll(".pb-prompt-item").forEach((item) => {
+            item.addEventListener("click", (e) => {
+              const index = parseInt(e.currentTarget.dataset.index);
+              this.insertPrompt(this.prompts[index], e.currentTarget);
+            });
+          });
+        }
+
+        insertPrompt(prompt, itemElement) {
+          const textarea = document.getElementById("demo-textarea");
+
+          if (!textarea) {
+            this.showNotification("No input field found!", "error");
+            return;
+          }
+
+          // Add visual feedback
+          itemElement.classList.add("inserting");
+
+          try {
+            // Insert the prompt content
+            textarea.value = prompt.content;
+            textarea.focus();
+
+            // Position cursor at the end
+            const length = textarea.value.length;
+            textarea.setSelectionRange(length, length);
+
+            // Show success feedback
+            this.showNotification(`Inserted: ${prompt.title}`, "success");
+          } catch (error) {
+            console.error("Error inserting prompt:", error);
+            this.showNotification(
+              "Failed to insert prompt. Please try again.",
+              "error"
+            );
+          } finally {
+            // Remove visual feedback
+            setTimeout(() => {
+              itemElement.classList.remove("inserting");
+            }, 1000);
+          }
+        }
+
+        showNotification(message, type = "info") {
+          const notification = document.createElement("div");
+          notification.className = `notification ${type}`;
+          notification.textContent = message;
+
+          document.body.appendChild(notification);
+
+          // Animate in
+          setTimeout(() => {
+            notification.classList.add("show");
+          }, 10);
+
+          // Animate out and remove
+          setTimeout(() => {
+            notification.classList.remove("show");
+            setTimeout(() => {
+              if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+              }
+            }, 300);
+          }, 3000);
+        }
+
+        escapeHtml(text) {
+          const div = document.createElement("div");
+          div.textContent = text;
+          return div.innerHTML;
+        }
+      }
+
+      // Initialize when the page loads
+      document.addEventListener("DOMContentLoaded", () => {
+        new PromptBoostDebug();
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,28 @@
+{
+  "name": "prompt-boost-extension",
+  "version": "1.0.0",
+  "description": "Chrome extension for managing AI prompts",
+  "scripts": {
+    "build": "echo 'Building extension...' && npm run validate",
+    "validate": "node scripts/validate.js",
+    "package": "node scripts/package.js",
+    "test": "echo 'Running tests...' && node scripts/test.js"
+  },
+  "keywords": [
+    "chrome-extension",
+    "ai",
+    "chatgpt",
+    "prompts",
+    "productivity"
+  ],
+  "author": "Sai Pone Kha Aung",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/prompt-boost.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/prompt-boost/issues"
+  },
+  "homepage": "https://github.com/yourusername/prompt-boost#readme"
+}
