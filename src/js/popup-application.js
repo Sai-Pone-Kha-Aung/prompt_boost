@@ -37,14 +37,25 @@ class PopupApplication {
       editContent: document.getElementById("editContent"),
       saveEditBtn: document.getElementById("saveEdit"),
       cancelEditBtn: document.getElementById("cancelEdit"),
+      sidebarToggleBtn: document.getElementById("sidebarToggle"),
     };
   }
 
   async initialize() {
-    const apiKey = await this.promptManager.initialize();
-    this.elements.geminiApiKey.value = apiKey;
-    this.uiRenderer.renderPrompts(this.promptManager.getPrompts());
-    this.setupEventListeners();
+    try {
+      const apiKey = await this.promptManager.initialize();
+      this.elements.geminiApiKey.value = apiKey;
+      this.uiRenderer.renderPrompts(this.promptManager.getPrompts());
+      this.setupEventListeners();
+      await this.initializeSidebarButton();
+    } catch (error) {
+      console.error("Error initializing popup application:", error);
+      // Show a basic error message to the user
+      this.uiRenderer.showMessage(
+        "Failed to initialize extension. Please refresh and try again.",
+        "error"
+      );
+    }
   }
 
   setupEventListeners() {
@@ -69,6 +80,11 @@ class PopupApplication {
     );
     this.elements.cancelEditBtn.addEventListener("click", () =>
       this.uiRenderer.hideEditForm()
+    );
+
+    // Sidebar toggle functionality
+    this.elements.sidebarToggleBtn.addEventListener("click", () =>
+      this.handleSidebarToggle()
     );
 
     // Prompt actions event delegation
@@ -131,6 +147,147 @@ class PopupApplication {
       );
     } catch (error) {
       this.uiRenderer.showMessage(error.message, "error");
+    }
+  }
+
+  async handleSidebarToggle() {
+    try {
+      // Check if chrome.tabs is available
+      if (!chrome || !chrome.tabs) {
+        this.uiRenderer.showMessage("Chrome tabs API not available", "error");
+        return;
+      }
+
+      // Get the current active tab
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
+
+      if (!tab) {
+        this.uiRenderer.showMessage("No active tab found", "error");
+        return;
+      }
+
+      // Check if the tab URL is supported
+      const supportedUrls = [
+        "https://chatgpt.com/*",
+        "https://chat.deepseek.com/*",
+        "https://grok.com/*",
+        "https://gemini.google.com/*",
+      ];
+
+      const isSupported = supportedUrls.some((pattern) => {
+        const regex = new RegExp(pattern.replace(/\*/g, ".*"));
+        return regex.test(tab.url);
+      });
+
+      if (!isSupported) {
+        this.uiRenderer.showMessage(
+          "Sidebar is only available on supported AI platforms (ChatGPT, DeepSeek, Grok, Gemini)",
+          "error"
+        );
+        return;
+      }
+
+      // Send message to content script to toggle sidebar
+      await chrome.tabs.sendMessage(tab.id, { action: "toggleSidebar" });
+
+      // Update button text based on current state
+      const currentText = this.elements.sidebarToggleBtn.textContent.trim();
+      if (currentText === "Open Sidebar") {
+        this.elements.sidebarToggleBtn.textContent = "Close Sidebar";
+      } else {
+        this.elements.sidebarToggleBtn.textContent = "Open Sidebar";
+      }
+
+      this.uiRenderer.showMessage("Sidebar toggled successfully!", "success");
+    } catch (error) {
+      console.error("Error toggling sidebar:", error);
+      this.uiRenderer.showMessage(
+        "Could not toggle sidebar. Make sure you're on a supported AI platform page.",
+        "error"
+      );
+    }
+  }
+
+  async initializeSidebarButton() {
+    try {
+      // Check if chrome.tabs is available
+      if (!chrome || !chrome.tabs) {
+        console.warn("Chrome tabs API not available");
+        this.elements.sidebarToggleBtn.textContent = "Open Sidebar";
+        this.elements.sidebarToggleBtn.disabled = false;
+        this.elements.sidebarToggleBtn.title = "Toggle the sidebar";
+        return;
+      }
+
+      // Get the current active tab
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
+
+      if (!tab) {
+        this.elements.sidebarToggleBtn.textContent = "Open Sidebar";
+        this.elements.sidebarToggleBtn.disabled = true;
+        this.elements.sidebarToggleBtn.title = "No active tab found";
+        return;
+      }
+
+      // Check if the tab URL is supported
+      const supportedUrls = [
+        "https://chatgpt.com/*",
+        "https://chat.deepseek.com/*",
+        "https://grok.com/*",
+        "https://gemini.google.com/*",
+      ];
+
+      const isSupported = supportedUrls.some((pattern) => {
+        const regex = new RegExp(pattern.replace(/\*/g, ".*"));
+        return regex.test(tab.url);
+      });
+
+      if (!isSupported) {
+        this.elements.sidebarToggleBtn.textContent = "Open Sidebar";
+        this.elements.sidebarToggleBtn.disabled = true;
+        this.elements.sidebarToggleBtn.title =
+          "Only available on supported AI platforms";
+        return;
+      }
+
+      // Enable button for supported platforms
+      this.elements.sidebarToggleBtn.disabled = false;
+      this.elements.sidebarToggleBtn.title =
+        "Toggle the sidebar on the current page";
+
+      // Try to query the current sidebar state
+      try {
+        const response = await chrome.tabs.sendMessage(tab.id, {
+          action: "getSidebarState",
+        });
+        if (response && response.isVisible !== undefined) {
+          if (response.isVisible) {
+            this.elements.sidebarToggleBtn.textContent = "Close Sidebar";
+            this.elements.sidebarToggleBtn.title = response.isCollapsed
+              ? "Sidebar is currently collapsed - click to close completely"
+              : "Sidebar is currently expanded - click to close completely";
+          } else {
+            this.elements.sidebarToggleBtn.textContent = "Open Sidebar";
+            this.elements.sidebarToggleBtn.title =
+              "Click to open sidebar in collapsed mode";
+          }
+        } else {
+          this.elements.sidebarToggleBtn.textContent = "Open Sidebar";
+        }
+      } catch (error) {
+        // Content script might not be loaded yet, default to "Open Sidebar"
+        this.elements.sidebarToggleBtn.textContent = "Open Sidebar";
+      }
+    } catch (error) {
+      console.error("Error initializing sidebar button:", error);
+      this.elements.sidebarToggleBtn.textContent = "Open Sidebar";
+      this.elements.sidebarToggleBtn.disabled = false;
     }
   }
 

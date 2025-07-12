@@ -13,6 +13,20 @@ class ContentMessageService extends window.ContentInterfaces.IMessageService {
         return true;
       }
 
+      if (request.action === "toggleSidebar") {
+        console.log("🔄 Received sidebar toggle request from popup...");
+        callback("toggleSidebar");
+        sendResponse({ success: true });
+        return true;
+      }
+
+      if (request.action === "getSidebarState") {
+        console.log("📊 Received sidebar state request from popup...");
+        const state = callback("getSidebarState");
+        sendResponse(state || { isVisible: false });
+        return true;
+      }
+
       return true;
     });
   }

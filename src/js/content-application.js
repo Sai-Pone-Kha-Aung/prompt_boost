@@ -49,6 +49,10 @@ class PromptBoost {
     this.messageService.setupMessageListener((action) => {
       if (action === "syncPrompts") {
         this.loadPrompts();
+      } else if (action === "toggleSidebar") {
+        this.toggleSidebar();
+      } else if (action === "getSidebarState") {
+        return this.getSidebarState();
       }
     });
 
@@ -96,6 +100,59 @@ class PromptBoost {
         this.sidebarRenderer.showNotification("📝 Prompt updated", "info");
       }
     }
+  }
+
+  toggleSidebar() {
+    console.log("🔄 Toggling sidebar visibility from popup...");
+    if (this.sidebarRenderer && this.sidebarRenderer.sidebar) {
+      this.sidebarRenderer.toggleSidebarFromPopup();
+      const isVisible = this.sidebarRenderer.isVisible;
+      const isCollapsed = this.sidebarRenderer.isCollapsed;
+
+      let message = isVisible
+        ? isCollapsed
+          ? "Sidebar opened (collapsed)"
+          : "Sidebar opened (expanded)"
+        : "Sidebar closed";
+
+      this.sidebarRenderer.showNotification(message, "info");
+    } else {
+      console.log("⚠️ Sidebar not found, creating it...");
+      this.sidebarRenderer.createSidebar();
+      this.updateUI();
+      // When creating for the first time, start in collapsed state
+      this.sidebarRenderer.isCollapsed = true;
+      this.sidebarRenderer.sidebar.classList.add("collapsed");
+
+      const sidebarContentHeader = this.sidebarRenderer.sidebar.querySelector(
+        ".pb-sidebar-content-header"
+      );
+      const toggleBtn =
+        this.sidebarRenderer.sidebar.querySelector(".pb-toggle-btn");
+      const toggleIcon = this.sidebarRenderer.sidebar.querySelector(
+        ".pb-toggle-btn span"
+      );
+
+      sidebarContentHeader.style.display = "none";
+      toggleBtn.style.justifyContent = "flex-start";
+      toggleIcon.textContent = "←";
+
+      this.sidebarRenderer.showNotification(
+        "Sidebar opened (collapsed)",
+        "success"
+      );
+    }
+  }
+
+  getSidebarState() {
+    if (this.sidebarRenderer && this.sidebarRenderer.sidebar) {
+      return this.sidebarRenderer.getSidebarState();
+    }
+    return {
+      isVisible: false,
+      isCollapsed: false,
+      exists: false,
+    };
   }
 
   // Debug methods

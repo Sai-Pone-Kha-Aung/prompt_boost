@@ -4,6 +4,7 @@ class SidebarRenderer extends window.ContentInterfaces.ISidebarRenderer {
     super();
     this.sidebar = null;
     this.isVisible = true;
+    this.isCollapsed = false; // New state for collapsed mode
   }
 
   createSidebar() {
@@ -82,25 +83,58 @@ class SidebarRenderer extends window.ContentInterfaces.ISidebarRenderer {
 
     promptsList.innerHTML = promptsHTML;
   }
-
   toggleSidebar() {
-    this.isVisible = !this.isVisible;
+    // This is the internal toggle (within sidebar) - toggles between collapsed and expanded
+    this.isCollapsed = !this.isCollapsed;
     const toggleIcon = this.sidebar.querySelector(".pb-toggle-btn span");
     const toggleBtn = this.sidebar.querySelector(".pb-toggle-btn");
     const sidebarContentHeader = this.sidebar.querySelector(
       ".pb-sidebar-content-header"
     );
 
-    if (this.isVisible) {
-      this.sidebar.classList.remove("collapsed");
-      sidebarContentHeader.style.display = "flex";
-      toggleIcon.textContent = "→";
-    } else {
+    if (this.isCollapsed) {
       this.sidebar.classList.add("collapsed");
       sidebarContentHeader.style.display = "none";
       toggleBtn.style.justifyContent = "flex-start";
       toggleIcon.textContent = "←";
+    } else {
+      this.sidebar.classList.remove("collapsed");
+      sidebarContentHeader.style.display = "flex";
+      toggleIcon.textContent = "→";
     }
+  }
+
+  toggleSidebarFromPopup() {
+    // This is the popup toggle - toggles between hidden and collapsed
+    this.isVisible = !this.isVisible;
+
+    if (this.isVisible) {
+      // Show sidebar in collapsed state when opened from popup
+      this.sidebar.style.display = "block";
+      this.isCollapsed = true;
+      this.sidebar.classList.add("collapsed");
+
+      const sidebarContentHeader = this.sidebar.querySelector(
+        ".pb-sidebar-content-header"
+      );
+      const toggleBtn = this.sidebar.querySelector(".pb-toggle-btn");
+      const toggleIcon = this.sidebar.querySelector(".pb-toggle-btn span");
+
+      sidebarContentHeader.style.display = "none";
+      toggleBtn.style.justifyContent = "flex-start";
+      toggleIcon.textContent = "←";
+    } else {
+      // Hide sidebar completely
+      this.sidebar.style.display = "none";
+    }
+  }
+
+  getSidebarState() {
+    return {
+      isVisible: this.isVisible,
+      isCollapsed: this.isCollapsed,
+      exists: this.sidebar !== null,
+    };
   }
 
   showNotification(message, type = "info") {
