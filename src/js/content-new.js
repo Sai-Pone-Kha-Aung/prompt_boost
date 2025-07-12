@@ -2,7 +2,8 @@
 
 // Initialize when the script loads
 function initializePromptBoost() {
-  const promptBoost = window.ContentFactories.ContentServiceFactory.createPromptBoost();
+  const promptBoost =
+    window.ContentFactories.ContentServiceFactory.createPromptBoost();
   promptBoost.init();
   return promptBoost;
 }

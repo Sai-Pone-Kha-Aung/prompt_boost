@@ -113,6 +113,27 @@
       </div>
     </div>
 
+    <!-- Load modules in dependency order -->
+    <!-- 1. Interfaces first -->
+    <script src="../js/interfaces/popup-interfaces.js"></script>
+
+    <!-- 2. Utilities and services -->
+    <script src="../js/utils/popup-utils.js"></script>
+    <script src="../js/utils/import-export.js"></script>
+    <script src="../js/services/storage-service.js"></script>
+    <script src="../js/services/prompt-booster-service.js"></script>
+    <script src="../js/services/ui-renderer.js"></script>
+
+    <!-- 3. Managers -->
+    <script src="../js/managers/prompt-manager.js"></script>
+
+    <!-- 4. Factories -->
+    <script src="../js/factories/service-factory.js"></script>
+
+    <!-- 5. Main application -->
+    <script src="../js/popup-application.js"></script>
+
+    <!-- 6. Entry point -->
     <script src="../js/popup.js"></script>
   </body>
 </html>

@@ -30,7 +30,18 @@
         "https://grok.com/*",
         "https://gemini.google.com/*"
       ],
-      "js": ["src/js/content.js"],
+      "js": [
+        "src/js/interfaces/content-interfaces.js",
+        "src/js/services/content-storage-service.js",
+        "src/js/services/content-message-service.js",
+        "src/js/utils/platform-detector.js",
+        "src/js/utils/input-field-finder.js",
+        "src/js/services/content-sidebar-renderer.js",
+        "src/js/utils/prompt-inserter.js",
+        "src/js/factories/content-service-factory.js",
+        "src/js/content-application.js",
+        "src/js/content.js"
+      ],
       "css": ["src/styles/content.css"],
       "run_at": "document_end"
     }
