@@ -48,30 +48,75 @@ class PromptBoost {
 
   setup() {
     console.log("🚀 Prompt Boost initializing on:", this.detectPlatform());
-    this.loadPrompts();
-    this.createSidebar();
+
+    // Set up storage listener first
     this.setupStorageListener();
 
-    // Debug input field detection
-    setTimeout(() => this.debugInputFields(), 2000);
+    // Set up message listener for immediate sync
+    this.setupMessageListener();
 
-    // Re-check for input fields periodically (for dynamic content)
-    setInterval(() => this.updateInputFieldDetection(), 2000);
+    // Then load prompts
+    this.loadPrompts();
+
+    // Create sidebar
+    this.createSidebar();
   }
 
   loadPrompts() {
-    chrome.storage.sync.get(["prompts"], (result) => {
+    console.log("📖 Loading prompts from local storage...");
+    chrome.storage.local.get(["prompts"], (result) => {
       this.prompts = result.prompts || [];
+      console.log(
+        `✅ Loaded ${this.prompts.length} prompts from local storage`
+      );
       this.updateSidebar();
     });
   }
 
   setupStorageListener() {
+    // Listen for local storage changes
     chrome.storage.onChanged.addListener((changes, areaName) => {
-      if (areaName === "sync" && changes.prompts) {
+      console.log("🔄 Storage changed:", changes, "Area:", areaName);
+      if (areaName === "local" && changes.prompts) {
+        console.log(
+          "✅ Prompts updated in local storage, syncing content script..."
+        );
         this.prompts = changes.prompts.newValue || [];
         this.updateSidebar();
+
+        // Show notification about the sync
+        if (changes.prompts.newValue && changes.prompts.oldValue) {
+          const oldCount = changes.prompts.oldValue
+            ? changes.prompts.oldValue.length
+            : 0;
+          const newCount = changes.prompts.newValue.length;
+
+          if (newCount > oldCount) {
+            this.showNotification("✨ New prompt added!", "success");
+          } else if (newCount < oldCount) {
+            this.showNotification("🗑️ Prompt deleted", "info");
+          } else {
+            this.showNotification("📝 Prompt updated", "info");
+          }
+        }
       }
+    });
+  }
+
+  setupMessageListener() {
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      console.log("📨 Message received in content script:", request);
+
+      if (request.action === "syncPrompts") {
+        console.log(
+          "🔄 Received sync request from background/popup, reloading prompts..."
+        );
+        this.loadPrompts();
+        sendResponse({ success: true });
+        return true;
+      }
+
+      return true; // Keep the message channel open for async response
     });
   }
 
@@ -93,9 +138,11 @@ class PromptBoost {
                     <span class="pb-prompt-count">0</span>
                   </h3>
                 </div>
-                <button class="pb-toggle-btn" title="Toggle Sidebar">
-                    <span>→</span>
-                </button>
+                    <button class="pb-toggle-btn" title="Toggle Sidebar">
+                        <span style="text-align: center; padding-bottom: 2px; background: transparent; border: none; cursor: pointer;">
+                            →
+                        </span>
+                    </button>
             </div>
             <div class="pb-sidebar-content">
                 <ul class="pb-prompts-list"></ul>
@@ -105,7 +152,6 @@ class PromptBoost {
     // Add toggle functionality
     const toggleBtn = this.sidebar.querySelector(".pb-toggle-btn");
     toggleBtn.addEventListener("click", () => this.toggleSidebar());
-
     // Add to page
     document.body.appendChild(this.sidebar);
 
@@ -123,8 +169,8 @@ class PromptBoost {
 
     if (this.isVisible) {
       this.sidebar.classList.remove("collapsed");
-      toggleIcon.textContent = "→";
       sidebarContentHeader.style.display = "flex";
+      toggleIcon.textContent = "→";
     } else {
       this.sidebar.classList.add("collapsed");
       sidebarContentHeader.style.display = "none";
@@ -134,7 +180,12 @@ class PromptBoost {
   }
 
   updateSidebar() {
-    if (!this.sidebar) return;
+    if (!this.sidebar) {
+      console.log("⚠️ Sidebar not found, cannot update");
+      return;
+    }
+
+    console.log(`🔄 Updating sidebar with ${this.prompts.length} prompts`);
 
     const promptsList = this.sidebar.querySelector(".pb-prompts-list");
     const promptCount = this.sidebar.querySelector(".pb-prompt-count");
@@ -311,9 +362,18 @@ class PromptBoost {
     }
   }
 
-  updateInputFieldDetection() {
-    // This method can be used to adapt to changes in the page structure
-    // For now, it's a placeholder for future enhancements
+  // Fallback method to check for updates periodically
+  checkForUpdates() {
+    chrome.storage.local.get(["prompts"], (result) => {
+      const storedPrompts = result.prompts || [];
+
+      // Only update if there's actually a difference
+      if (JSON.stringify(storedPrompts) !== JSON.stringify(this.prompts)) {
+        console.log("🔄 Detected prompts mismatch, syncing...");
+        this.prompts = storedPrompts;
+        this.updateSidebar();
+      }
+    });
   }
 
   // Detect which AI platform we're on

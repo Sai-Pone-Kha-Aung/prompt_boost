@@ -3,13 +3,16 @@
   "name": "Prompt Boost",
   "version": "1.0.0",
   "description": "Enhance your AI chat experience with saved prompts for ChatGPT, DeepSeek, Grok, and Gemini",
-  "permissions": ["storage", "activeTab"],
+  "permissions": ["storage", "activeTab", "tabs"],
   "host_permissions": [
     "https://chatgpt.com/*",
     "https://chat.deepseek.com/*",
     "https://grok.com/*",
     "https://gemini.google.com/*"
   ],
+  "background": {
+    "service_worker": "src/js/background.js"
+  },
   "action": {
     "default_popup": "src/html/popup.html",
     "default_title": "Prompt Boost",

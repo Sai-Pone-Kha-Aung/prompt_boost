@@ -199,18 +199,51 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Load prompts from storage
   function loadPrompts() {
-    chrome.storage.sync.get(["prompts"], function (result) {
-      prompts = result.prompts || [];
+    // Always load from local storage
+    chrome.storage.local.get(["prompts"], function (localResult) {
+      prompts = localResult.prompts || [];
+      console.log(`Loaded ${prompts.length} prompts from local storage`);
       renderPrompts();
     });
   }
 
   // Save prompts to storage
   function savePromptsToStorage() {
-    chrome.storage.sync.set({ prompts: prompts }, function () {
+    // Check storage size before saving
+    const promptsData = JSON.stringify(prompts);
+    const dataSize = new Blob([promptsData]).size;
+
+    console.log("Saving prompts to local storage:", {
+      promptsCount: prompts.length,
+      dataSize: dataSize,
+      storageType: "local",
+    });
+
+    // Always use local storage (no size limits)
+    chrome.storage.local.set({ prompts: prompts }, function () {
       if (chrome.runtime.lastError) {
-        showMessage("Error saving prompt. Please try again.", "error");
-        console.error("Storage error:", chrome.runtime.lastError);
+        const error = chrome.runtime.lastError;
+        const errorMessage = error.message || "Unknown storage error";
+
+        console.error("Local storage error:", {
+          fullError: error,
+          errorMessage: errorMessage,
+          promptsCount: prompts.length,
+          promptsSize: dataSize,
+        });
+
+        showMessage(`Storage Error: ${errorMessage}`, "error");
+      } else {
+        console.log("Prompts saved successfully to local storage");
+
+        // Send sync message to notify content scripts
+        chrome.runtime
+          .sendMessage({
+            action: "broadcastSync",
+          })
+          .catch((error) => {
+            console.log("Could not send broadcast sync message:", error);
+          });
       }
     });
   }
